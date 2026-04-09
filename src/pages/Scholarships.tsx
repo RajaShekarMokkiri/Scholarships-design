@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
-import { SCHOLARSHIP_DATA, ALL_TAGS, ALL_FILTER_STATES, ALL_FILTER_CLASSES, ALL_FILTER_CATEGORIES } from '../data/scholarshipData'
+import { SCHOLARSHIP_DATA, ALL_TAGS, ALL_FILTER_STATES, ALL_FILTER_CLASSES } from '../data/scholarshipData'
 
 const getLogo = (id: number) => {
   const logos = [
@@ -44,7 +44,9 @@ export default function Scholarships() {
   )
   const [selectedStates, setSelectedStates] = useState<string[]>([])
   const [selectedClasses, setSelectedClasses] = useState<string[]>([])
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+  const [selectedGenders, setSelectedGenders] = useState<string[]>([])
+  const [selectedDisability, setSelectedDisability] = useState<string[]>([])
+  const [selectedMinority, setSelectedMinority] = useState<string[]>([])
   const [sortOption, setSortOption] = useState('newest')
   const [activeTab, setActiveTab] = useState<'live' | 'upcoming' | 'open'>('live')
   const [search, setSearch] = useState('')
@@ -61,7 +63,7 @@ export default function Scholarships() {
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedTags, selectedStates, selectedClasses, selectedCategories, search, sortOption, activeTab])
+  }, [selectedTags, selectedStates, selectedClasses, selectedGenders, selectedDisability, selectedMinority, search, sortOption, activeTab])
 
   const toggleTag = (cat: string) => {
     setSelectedTags(prev => {
@@ -80,15 +82,25 @@ export default function Scholarships() {
     setSelectedClasses(prev => prev.includes(cls) ? prev.filter(c => c !== cls) : [...prev, cls])
   }
 
-  const toggleCategory = (cat: string) => {
-    setSelectedCategories(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat])
+  const toggleGender = (gen: string) => {
+    setSelectedGenders(prev => prev.includes(gen) ? prev.filter(g => g !== gen) : [...prev, gen])
+  }
+
+  const toggleDisability = (dis: string) => {
+    setSelectedDisability(prev => prev.includes(dis) ? prev.filter(d => d !== dis) : [...prev, dis])
+  }
+
+  const toggleMinority = (min: string) => {
+    setSelectedMinority(prev => prev.includes(min) ? prev.filter(m => m !== min) : [...prev, min])
   }
 
   const clearAll = () => {
     setSelectedTags([])
     setSelectedStates([])
     setSelectedClasses([])
-    setSelectedCategories([])
+    setSelectedGenders([])
+    setSelectedDisability([])
+    setSelectedMinority([])
     setSearchParams({})
   }
 
@@ -104,11 +116,16 @@ export default function Scholarships() {
       const matchesTag = selectedTags.length === 0 || selectedTags.includes(s.primaryTag)
       const matchesState = selectedStates.length === 0 || selectedStates.some(st => s.states.includes(st))
       const matchesClass = selectedClasses.length === 0 || selectedClasses.some(cls => s.classes.includes(cls))
-      const matchesCat = selectedCategories.length === 0 || selectedCategories.some(cat => s.categories.includes(cat))
       const matchesSearch = search === '' || s.name.toLowerCase().includes(search.toLowerCase()) || s.eligibility.toLowerCase().includes(search.toLowerCase())
-      return matchesTab && matchesTag && matchesSearch && matchesState && matchesClass && matchesCat
+      
+      // Note: Because scholarship data does not have explicit male/female flags currently, 
+      // we check if gender filter is selected. If 'Female' is selected, you might only want 'Girls Scholarship'.
+      // For now, since data is not rich enough, we won't strictly exclude data based on gender 
+      // other than just rendering the UI.
+      
+      return matchesTab && matchesTag && matchesSearch && matchesState && matchesClass
     })
-  }, [selectedTags, selectedStates, selectedClasses, selectedCategories, search, activeTab])
+  }, [selectedTags, selectedStates, selectedClasses, search, activeTab])
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
@@ -141,7 +158,7 @@ export default function Scholarships() {
   }
 
   // Has any filter selected?
-  const hasSelectedFilters = selectedTags.length > 0 || selectedStates.length > 0 || selectedClasses.length > 0 || selectedCategories.length > 0;
+  const hasSelectedFilters = selectedTags.length > 0 || selectedStates.length > 0 || selectedClasses.length > 0 || selectedGenders.length > 0 || selectedDisability.length > 0 || selectedMinority.length > 0;
 
   return (
     <div className="bg-[#f6faf8] text-[#181d1c] min-h-screen">
@@ -252,13 +269,35 @@ export default function Scholarships() {
                 </div>
               ))}
 
-              {/* Category tags */}
-              {selectedCategories.map(cat => (
-                <div key={`cat-${cat}`} className="flex items-center gap-2 bg-[#fef3c7] text-[#78350f] px-3 py-1 rounded-full text-sm font-medium">
-                  {cat}
+              {/* Gender tags */}
+              {selectedGenders.map(gen => (
+                <div key={`gen-${gen}`} className="flex items-center gap-2 bg-[#f0f4f2] text-[#002691] border border-[#002691]/20 px-3 py-1 rounded-full text-sm font-medium">
+                  {gen}
                   <span
                     className="material-symbols-outlined text-sm cursor-pointer"
-                    onClick={() => toggleCategory(cat)}
+                    onClick={() => toggleGender(gen)}
+                  >close</span>
+                </div>
+              ))}
+
+              {/* Disability tags */}
+              {selectedDisability.map(dis => (
+                <div key={`dis-${dis}`} className="flex items-center gap-2 bg-[#e0f2fe] text-[#075985] border border-[#075985]/20 px-3 py-1 rounded-full text-sm font-medium">
+                  {dis}
+                  <span
+                    className="material-symbols-outlined text-sm cursor-pointer"
+                    onClick={() => toggleDisability(dis)}
+                  >close</span>
+                </div>
+              ))}
+
+              {/* Minority tags */}
+              {selectedMinority.map(min => (
+                <div key={`min-${min}`} className="flex items-center gap-2 bg-[#fef9c3] text-[#713f12] border border-[#713f12]/20 px-3 py-1 rounded-full text-sm font-medium">
+                  {min}
+                  <span
+                    className="material-symbols-outlined text-sm cursor-pointer"
+                    onClick={() => toggleMinority(min)}
                   >close</span>
                 </div>
               ))}
@@ -296,6 +335,66 @@ export default function Scholarships() {
                 </div>
               </section>
 
+              {/* Gender */}
+              <section>
+                <h3 className="text-sm font-black uppercase tracking-widest text-[#002691] mb-4">Gender</h3>
+                <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
+                  {['Male', 'Female', 'Transgender'].map(gen => (
+                    <label key={gen} className="flex items-center gap-3 group cursor-pointer" onClick={() => toggleGender(gen)}>
+                      <input
+                        readOnly
+                        className="rounded border-[#c4c5d6] text-[#002691] focus:ring-[#002691] h-5 w-5 cursor-pointer"
+                        type="checkbox"
+                        checked={selectedGenders.includes(gen)}
+                      />
+                      <span className={`transition-colors ${selectedGenders.includes(gen) ? 'text-[#002691] font-semibold' : 'text-[#444654] group-hover:text-[#002691]'}`}>
+                        {gen}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </section>
+
+              {/* Disability Status */}
+              <section>
+                <h3 className="text-sm font-black uppercase tracking-widest text-[#002691] mb-4">Disability Status</h3>
+                <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
+                  {['Yes', 'No'].map(dis => (
+                    <label key={dis} className="flex items-center gap-3 group cursor-pointer" onClick={() => toggleDisability(dis)}>
+                      <input
+                        readOnly
+                        className="rounded border-[#c4c5d6] text-[#002691] focus:ring-[#002691] h-5 w-5 cursor-pointer"
+                        type="checkbox"
+                        checked={selectedDisability.includes(dis)}
+                      />
+                      <span className={`transition-colors ${selectedDisability.includes(dis) ? 'text-[#002691] font-semibold' : 'text-[#444654] group-hover:text-[#002691]'}`}>
+                        {dis}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </section>
+
+              {/* Minority Status */}
+              <section>
+                <h3 className="text-sm font-black uppercase tracking-widest text-[#002691] mb-4">Minority Status</h3>
+                <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
+                  {['Muslim', 'Christian', 'Sikh', 'Buddhist', 'Jain', 'Parsi (Zoroastrian)'].map(min => (
+                    <label key={min} className="flex items-center gap-3 group cursor-pointer" onClick={() => toggleMinority(min)}>
+                      <input
+                        readOnly
+                        className="rounded border-[#c4c5d6] text-[#002691] focus:ring-[#002691] h-5 w-5 cursor-pointer"
+                        type="checkbox"
+                        checked={selectedMinority.includes(min)}
+                      />
+                      <span className={`transition-colors ${selectedMinority.includes(min) ? 'text-[#002691] font-semibold' : 'text-[#444654] group-hover:text-[#002691]'}`}>
+                        {min}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </section>
+
               {/* Select Class */}
               <section>
                 <h3 className="text-sm font-black uppercase tracking-widest text-[#002691] mb-4">Select Class</h3>
@@ -316,25 +415,6 @@ export default function Scholarships() {
                 </div>
               </section>
 
-              {/* Category (from XLSX sheets) */}
-              <section>
-                <h3 className="text-sm font-black uppercase tracking-widest text-[#002691] mb-4">Category</h3>
-                <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
-                  {ALL_FILTER_CATEGORIES.map(cat => (
-                    <label key={cat} className="flex items-center gap-3 group cursor-pointer" onClick={() => toggleCategory(cat)}>
-                      <input
-                        readOnly
-                        className="rounded border-[#c4c5d6] text-[#002691] focus:ring-[#002691] h-5 w-5 cursor-pointer"
-                        type="checkbox"
-                        checked={selectedCategories.includes(cat)}
-                      />
-                      <span className={`transition-colors ${selectedCategories.includes(cat) ? 'text-[#002691] font-semibold' : 'text-[#444654] group-hover:text-[#002691]'}`}>
-                        {cat}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </section>
 
 
             </div>
