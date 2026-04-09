@@ -336,39 +336,16 @@ export default function Scholarships() {
                 </div>
               </section>
 
-              {/* Deadline */}
-              <section>
-                <h3 className="text-sm font-black uppercase tracking-widest text-[#002691] mb-4">Deadline</h3>
-                <select className="w-full bg-[#e5e9e7] border-none rounded-lg p-3 text-[#444654] focus:ring-2 focus:ring-[#002691]/30 outline-none">
-                  <option>All Deadlines</option>
-                  <option>Next 30 Days</option>
-                  <option>Next 3 Months</option>
-                  <option>This Year</option>
-                </select>
-              </section>
+
             </div>
           </aside>
 
           {/* ── Main Content ── */}
           <div className="flex-1">
 
-            {/* Tabs & Sorting */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 pb-4 border-b border-[#c4c5d6]/20 gap-4">
-              <div className="flex gap-8 overflow-x-auto whitespace-nowrap">
-                {(['live', 'upcoming', 'open'] as const).map(tab => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`pb-2 font-bold transition-all capitalize ${activeTab === tab ? 'text-[#002691] border-b-2 border-[#002691]' : 'text-[#757685] hover:text-[#002691]'}`}
-                  >
-                    {tab === 'live' ? `Live Scholarship (${tabCounts.live})` : tab === 'upcoming' ? `Upcoming Scholarship (${tabCounts.upcoming})` : `Always Open (${tabCounts.open})`}
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex items-center gap-3 flex-shrink-0">
-                <span className="text-sm text-[#757685] font-medium">{sorted.length} results</span>
-                <span className="text-[#c4c5d6]">•</span>
+            {/* Sorting */}
+            <div className="flex justify-end mb-4">
+              <div className="flex items-center gap-3">
                 <span className="text-sm font-bold text-[#757685]">Sort by:</span>
                 <select 
                   className="bg-white border border-[#c4c5d6]/50 rounded-lg p-2 px-3 pr-8 text-sm text-[#181d1c] font-bold outline-none focus:ring-2 focus:ring-[#002691]/30 cursor-pointer shadow-sm appearance-none"
@@ -386,6 +363,25 @@ export default function Scholarships() {
                   <option value="amount_high_low">Amount: High to Low</option>
                   <option value="amount_low_high">Amount: Low to High</option>
                 </select>
+              </div>
+            </div>
+
+            {/* Tabs & Results */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 pb-4 border-b border-[#c4c5d6]/20 gap-4">
+              <div className="flex gap-8 overflow-x-auto whitespace-nowrap [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                {(['live', 'upcoming', 'open'] as const).map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`pb-2 font-bold transition-all capitalize ${activeTab === tab ? 'text-[#002691] border-b-2 border-[#002691]' : 'text-[#757685] hover:text-[#002691]'}`}
+                  >
+                    {tab === 'live' ? `Live Scholarship (${tabCounts.live})` : tab === 'upcoming' ? `Upcoming Scholarship (${tabCounts.upcoming})` : `Always Open (${tabCounts.open})`}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex items-center justify-end flex-shrink-0">
+                <span className="text-sm font-bold text-[#444654] bg-[#e5e9e7] px-4 py-1.5 rounded-full">{sorted.length} results</span>
               </div>
             </div>
 
