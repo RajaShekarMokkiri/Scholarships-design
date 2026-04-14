@@ -1,4 +1,5 @@
-import { useParams, Link } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { SCHOLARSHIP_DATA } from '../data/scholarshipData';
 
 const TAG_COLORS: Record<string, string> = {
@@ -39,7 +40,20 @@ function parseBenefits(text: string): { title: string; value: string }[] {
 
 export default function ScholarshipDetail() {
   const { id } = useParams();
+  const { hash } = useLocation();
   const scholarship = SCHOLARSHIP_DATA.find(s => s.id === Number(id));
+
+  useEffect(() => {
+    if (!scholarship || !hash) return;
+
+    const targetId = hash.replace('#', '');
+    const targetElement = document.getElementById(targetId);
+    if (!targetElement) return;
+
+    requestAnimationFrame(() => {
+      targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [hash, scholarship]);
 
   if (!scholarship) {
     return (
@@ -158,24 +172,9 @@ export default function ScholarshipDetail() {
               </div>
             </section>
 
-            {/* States chips */}
-            {scholarship.states.length > 0 && (
-              <section>
-                <h3 className="text-sm font-black uppercase tracking-widest text-[#002691] mb-4">Available In</h3>
-                <div className="flex flex-wrap gap-2">
-                  {scholarship.states.map(st => (
-                    <span key={st} className="bg-[#dde1ff] text-[#001356] px-3 py-1.5 rounded-full text-xs font-bold">{st}</span>
-                  ))}
-                  {scholarship.classes.map(cl => (
-                    <span key={cl} className="bg-[#fbe2f4] text-[#831860] px-3 py-1.5 rounded-full text-xs font-bold">{cl}</span>
-                  ))}
-                </div>
-              </section>
-            )}
-
             {/* About Section */}
             {scholarship.about && (
-              <section className="prose prose-slate max-w-none">
+              <section id="about-scholarship" className="prose prose-slate max-w-none scroll-mt-28">
                 <h2 className="text-3xl font-bold text-[#181d1c] mb-6">About the Scholarship</h2>
                 <div className="bg-white p-8 rounded-2xl border border-[#e5e9e7]">
                   <p className="text-[#444654] text-lg leading-relaxed whitespace-pre-line">{scholarship.about}</p>
@@ -186,7 +185,7 @@ export default function ScholarshipDetail() {
             {/* Eligibility & Benefits Asymmetric Layout */}
             <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Eligibility */}
-              <div className="bg-white p-8 rounded-2xl shadow-sm border border-[#e5e9e7]">
+              <div id="scholarship-eligibility" className="bg-white p-8 rounded-2xl shadow-sm border border-[#e5e9e7] scroll-mt-28">
                 <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
                   <span className="material-symbols-outlined text-[#006c51]">check_circle</span>
                   Eligibility Criteria
@@ -206,10 +205,10 @@ export default function ScholarshipDetail() {
               </div>
 
               {/* Benefits */}
-              <div className="bg-[#f0f4f2] p-8 rounded-2xl">
+              <div id="benefits-documents" className="bg-[#f0f4f2] p-8 rounded-2xl scroll-mt-28">
                 <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
                   <span className="material-symbols-outlined text-[#002691]">stars</span>
-                  Scholar Benefits
+                  Benefits & Documents
                 </h3>
                 {benefitItems.length > 0 ? (
                   <ul className="space-y-3">
@@ -231,12 +230,18 @@ export default function ScholarshipDetail() {
                     <span className="text-sm text-[#444654]">{scholarship.award}</span>
                   </div>
                 )}
+                <div className="mt-6 bg-white/80 p-4 rounded-xl">
+                  <p className="text-sm font-bold text-[#181d1c] mb-2">Documents</p>
+                  <p className="text-sm text-[#444654] leading-relaxed">
+                    Please keep your academic records, identity proof, income certificate, and a recent photograph ready before applying.
+                  </p>
+                </div>
               </div>
             </section>
 
             {/* How to Apply */}
             {howToApplySteps.length > 0 && (
-              <section>
+              <section id="how-to-apply" className="scroll-mt-28">
                 <h2 className="text-3xl font-bold text-[#181d1c] mb-8">How to Apply</h2>
                 <div className="bg-white p-8 rounded-2xl border border-[#e5e9e7] shadow-sm">
                   <ol className="space-y-6">

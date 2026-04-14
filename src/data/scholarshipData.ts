@@ -2206,11 +2206,13 @@ export const SCHOLARSHIP_DATA: ScholarshipData[] = [
 ];
 
 export const ALL_TAGS: string[] = [
-  "General",
+  "Means Based",
+  "Merit Based",
   "Girls Scholarship",
+  "School Scholarship",
+  "College Scholarship",
   "International",
-  "Study Abroad",
-  "Means Based"
+  "Minorities Scholarship"
 ];
 export const ALL_FILTER_STATES: string[] = [
   "Maharashtra",

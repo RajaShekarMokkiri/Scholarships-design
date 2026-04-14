@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useSearchParams, Link } from 'react-router-dom'
-import { SCHOLARSHIP_DATA, ALL_TAGS, ALL_FILTER_STATES, ALL_FILTER_CLASSES } from '../data/scholarshipData'
+import { useSearchParams, Link, useNavigate } from 'react-router-dom'
+import { SCHOLARSHIP_DATA, ALL_TAGS, ALL_FILTER_STATES } from '../data/scholarshipData'
 
 const getLogo = (id: number) => {
   const logos = [
@@ -34,8 +34,41 @@ const TAG_COLORS: Record<string, string> = {
 }
 
 const ITEMS_PER_PAGE = 12;
+const COUNTRY_OPTIONS = ['India', 'Study Abroad'] as const;
+const CLASS_FILTER_OPTIONS = [
+  'Upto Class 8',
+  'Class 9',
+  'Class 10',
+  'Class 11',
+  'Class 12',
+  'Graduation',
+  'Post Graduation',
+  'Post Graduation Diploma',
+] as const;
+const COURSE_FILTER_OPTIONS = [
+  'Engineering',
+  'Medical',
+  'Management',
+  'Law',
+  'Talent',
+  'Sports',
+] as const;
+
+const matchesClassFilter = (scholarshipClasses: string[], selectedClass: string) => {
+  if (selectedClass === 'Upto Class 8' || selectedClass === 'Class 9' || selectedClass === 'Class 10') {
+    return scholarshipClasses.includes('Class 1 10');
+  }
+  if (selectedClass === 'Class 11' || selectedClass === 'Class 12') {
+    return scholarshipClasses.includes('Class 11 12');
+  }
+  if (selectedClass === 'Post Graduation Diploma') {
+    return scholarshipClasses.some(cls => cls.includes('Polytechnic') || cls.includes('Diploma') || cls.includes('ITI'));
+  }
+  return scholarshipClasses.includes(selectedClass);
+}
 
 export default function Scholarships() {
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const categoryParam = searchParams.get('category') ?? ''
 
@@ -45,12 +78,21 @@ export default function Scholarships() {
   const [selectedStates, setSelectedStates] = useState<string[]>([])
   const [selectedClasses, setSelectedClasses] = useState<string[]>([])
   const [selectedGenders, setSelectedGenders] = useState<string[]>([])
-  const [selectedDisability, setSelectedDisability] = useState<string[]>([])
+  const [selectedCourses, setSelectedCourses] = useState<string[]>([])
   const [selectedMinority, setSelectedMinority] = useState<string[]>([])
-  const [sortOption, setSortOption] = useState('newest')
+  const [selectedCountries, setSelectedCountries] = useState<string[]>([])
+  const [sortOption, setSortOption] = useState('latest')
   const [activeTab, setActiveTab] = useState<'live' | 'upcoming' | 'open'>('live')
   const [search, setSearch] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
+  const [openFilters, setOpenFilters] = useState({
+    states: true,
+    country: true,
+    gender: true,
+    courses: true,
+    minority: true,
+    class: true,
+  })
 
   // Sync URL param → local state when navigating here
   useEffect(() => {
@@ -63,7 +105,7 @@ export default function Scholarships() {
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedTags, selectedStates, selectedClasses, selectedGenders, selectedDisability, selectedMinority, search, sortOption, activeTab])
+  }, [selectedTags, selectedStates, selectedClasses, selectedGenders, selectedCourses, selectedMinority, selectedCountries, search, sortOption, activeTab])
 
   const toggleTag = (cat: string) => {
     setSelectedTags(prev => {
@@ -86,12 +128,16 @@ export default function Scholarships() {
     setSelectedGenders(prev => prev.includes(gen) ? prev.filter(g => g !== gen) : [...prev, gen])
   }
 
-  const toggleDisability = (dis: string) => {
-    setSelectedDisability(prev => prev.includes(dis) ? prev.filter(d => d !== dis) : [...prev, dis])
+  const toggleCourse = (course: string) => {
+    setSelectedCourses(prev => prev.includes(course) ? prev.filter(c => c !== course) : [...prev, course])
   }
 
   const toggleMinority = (min: string) => {
     setSelectedMinority(prev => prev.includes(min) ? prev.filter(m => m !== min) : [...prev, min])
+  }
+
+  const toggleCountry = (country: string) => {
+    setSelectedCountries(prev => prev.includes(country) ? prev.filter(c => c !== country) : [...prev, country])
   }
 
   const clearAll = () => {
@@ -99,9 +145,17 @@ export default function Scholarships() {
     setSelectedStates([])
     setSelectedClasses([])
     setSelectedGenders([])
-    setSelectedDisability([])
+    setSelectedCourses([])
     setSelectedMinority([])
+    setSelectedCountries([])
     setSearchParams({})
+  }
+
+  const toggleFilterSection = (section: keyof typeof openFilters) => {
+    setOpenFilters(prev => ({
+      ...prev,
+      [section]: !prev[section],
+    }))
   }
 
   const tabCounts = useMemo(() => ({
@@ -115,7 +169,22 @@ export default function Scholarships() {
       const matchesTab = s.statuses.includes(activeTab)
       const matchesTag = selectedTags.length === 0 || selectedTags.includes(s.primaryTag)
       const matchesState = selectedStates.length === 0 || selectedStates.some(st => s.states.includes(st))
-      const matchesClass = selectedClasses.length === 0 || selectedClasses.some(cls => s.classes.includes(cls))
+      const matchesClass = selectedClasses.length === 0 || selectedClasses.some(cls => matchesClassFilter(s.classes, cls))
+      const courseKeywordMap: Record<string, string[]> = {
+        Engineering: ['engineering', 'b.tech', 'btech', 'technology', 'technical'],
+        Medical: ['medical', 'mbbs', 'nursing', 'health', 'pharma', 'paramedical'],
+        Management: ['management', 'mba', 'business', 'commerce', 'bba'],
+        Law: ['law', 'legal', 'llb'],
+        Talent: ['talent', 'art', 'cultural', 'music', 'dance', 'literary', 'visual'],
+        Sports: ['sports', 'athlete', 'athletic', 'game'],
+      }
+      const searchableCourseText = `${s.name} ${s.eligibility} ${s.about} ${s.primaryTag} ${s.categories.join(' ')}`.toLowerCase()
+      const matchesCourse = selectedCourses.length === 0 || selectedCourses.some(course => {
+        const keywords = courseKeywordMap[course] || [course.toLowerCase()]
+        return keywords.some(keyword => searchableCourseText.includes(keyword))
+      })
+      const scholarshipCountry = (s.primaryTag === 'International' || s.primaryTag === 'Study Abroad' || s.categories.includes('International') || s.categories.includes('Study Abroad')) ? 'Study Abroad' : 'India'
+      const matchesCountry = selectedCountries.length === 0 || selectedCountries.includes(scholarshipCountry)
       const matchesSearch = search === '' || s.name.toLowerCase().includes(search.toLowerCase()) || s.eligibility.toLowerCase().includes(search.toLowerCase())
       
       // Note: Because scholarship data does not have explicit male/female flags currently, 
@@ -123,16 +192,33 @@ export default function Scholarships() {
       // For now, since data is not rich enough, we won't strictly exclude data based on gender 
       // other than just rendering the UI.
       
-      return matchesTab && matchesTag && matchesSearch && matchesState && matchesClass
+      return matchesTab && matchesTag && matchesSearch && matchesState && matchesClass && matchesCourse && matchesCountry
     })
-  }, [selectedTags, selectedStates, selectedClasses, search, activeTab])
+  }, [selectedTags, selectedStates, selectedClasses, selectedCourses, selectedCountries, search, activeTab])
+
+  const parseDeadline = (deadline: string) => {
+    if (deadline.toLowerCase() === 'closed') return new Date(0);
+    try {
+      const [day, month, year] = deadline.split('-');
+      const monthMap: Record<string, number> = {
+        'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
+        'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
+      };
+      return new Date(parseInt(year), monthMap[month] || 0, parseInt(day));
+    } catch {
+      return new Date(0);
+    }
+  }
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
-      if (sortOption === 'amount_high_low') return parseAmount(b.award) - parseAmount(a.award)
-      if (sortOption === 'amount_low_high') return parseAmount(a.award) - parseAmount(b.award)
-      if (sortOption === 'newest') return b.id - a.id
-      if (sortOption === 'oldest') return a.id - b.id
+      if (sortOption === 'highest_amount') return parseAmount(b.award) - parseAmount(a.award)
+      if (sortOption === 'deadline') {
+        const dateA = parseDeadline(a.deadline);
+        const dateB = parseDeadline(b.deadline);
+        return dateA.getTime() - dateB.getTime();
+      }
+      if (sortOption === 'latest') return b.id - a.id
       return 0
     })
   }, [filtered, sortOption])
@@ -158,7 +244,35 @@ export default function Scholarships() {
   }
 
   // Has any filter selected?
-  const hasSelectedFilters = selectedTags.length > 0 || selectedStates.length > 0 || selectedClasses.length > 0 || selectedGenders.length > 0 || selectedDisability.length > 0 || selectedMinority.length > 0;
+  const hasSelectedFilters = selectedTags.length > 0 || selectedStates.length > 0 || selectedClasses.length > 0 || selectedGenders.length > 0 || selectedCourses.length > 0 || selectedMinority.length > 0 || selectedCountries.length > 0;
+
+  const renderFilterDropdown = (
+    title: string,
+    section: keyof typeof openFilters,
+    count: number,
+    content: JSX.Element,
+  ) => (
+    <section className="rounded-2xl border border-[#e5e9e7] bg-white shadow-sm overflow-hidden">
+      <button
+        type="button"
+        onClick={() => toggleFilterSection(section)}
+        className="flex w-full items-center justify-between px-5 py-4 text-left"
+      >
+        <div>
+          <h3 className="text-sm font-black uppercase tracking-widest text-[#002691]">{title}</h3>
+          <p className="mt-1 text-xs font-semibold text-[#757685]">{count} options</p>
+        </div>
+        <span className={`material-symbols-outlined text-[#002691] transition-transform duration-200 ${openFilters[section] ? 'rotate-180' : ''}`}>
+          expand_more
+        </span>
+      </button>
+      {openFilters[section] && (
+        <div className="border-t border-[#e5e9e7] px-5 py-4 max-h-64 overflow-y-auto pr-2">
+          {content}
+        </div>
+      )}
+    </section>
+  )
 
   return (
     <div className="bg-[#f6faf8] text-[#181d1c] min-h-screen">
@@ -258,6 +372,17 @@ export default function Scholarships() {
                 </div>
               ))}
 
+              {/* Country tags */}
+              {selectedCountries.map(country => (
+                <div key={`country-${country}`} className="flex items-center gap-2 bg-[#e0f2fe] text-[#075985] border border-[#075985]/20 px-3 py-1 rounded-full text-sm font-medium">
+                  {country}
+                  <span
+                    className="material-symbols-outlined text-sm cursor-pointer"
+                    onClick={() => toggleCountry(country)}
+                  >close</span>
+                </div>
+              ))}
+
               {/* Class tags */}
               {selectedClasses.map(cls => (
                 <div key={`cls-${cls}`} className="flex items-center gap-2 bg-[#fbe2f4] text-[#b81d89] px-3 py-1 rounded-full text-sm font-medium">
@@ -280,18 +405,18 @@ export default function Scholarships() {
                 </div>
               ))}
 
-              {/* Disability tags */}
-              {selectedDisability.map(dis => (
-                <div key={`dis-${dis}`} className="flex items-center gap-2 bg-[#e0f2fe] text-[#075985] border border-[#075985]/20 px-3 py-1 rounded-full text-sm font-medium">
-                  {dis}
+              {/* Course tags */}
+              {selectedCourses.map(course => (
+                <div key={`course-${course}`} className="flex items-center gap-2 bg-[#eef2ff] text-[#1e3a8a] border border-[#1e3a8a]/20 px-3 py-1 rounded-full text-sm font-medium">
+                  {course}
                   <span
                     className="material-symbols-outlined text-sm cursor-pointer"
-                    onClick={() => toggleDisability(dis)}
+                    onClick={() => toggleCourse(course)}
                   >close</span>
                 </div>
               ))}
 
-              {/* Minority tags */}
+              {/* Religion tags */}
               {selectedMinority.map(min => (
                 <div key={`min-${min}`} className="flex items-center gap-2 bg-[#fef9c3] text-[#713f12] border border-[#713f12]/20 px-3 py-1 rounded-full text-sm font-medium">
                   {min}
@@ -315,10 +440,11 @@ export default function Scholarships() {
           <aside className="w-full lg:w-72 flex-shrink-0">
             <div className="sticky top-24 space-y-8">
 
-              {/* States */}
-              <section>
-                <h3 className="text-sm font-black uppercase tracking-widest text-[#002691] mb-4">States</h3>
-                <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
+              {renderFilterDropdown(
+                'States',
+                'states',
+                ALL_FILTER_STATES.length,
+                <div className="space-y-3">
                   {ALL_FILTER_STATES.map(st => (
                     <label key={st} className="flex items-center gap-3 group cursor-pointer" onClick={() => toggleState(st)}>
                       <input
@@ -332,14 +458,36 @@ export default function Scholarships() {
                       </span>
                     </label>
                   ))}
-                </div>
-              </section>
+                </div>,
+              )}
 
-              {/* Gender */}
-              <section>
-                <h3 className="text-sm font-black uppercase tracking-widest text-[#002691] mb-4">Gender</h3>
-                <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
-                  {['Male', 'Female', 'Transgender'].map(gen => (
+              {renderFilterDropdown(
+                'Country',
+                'country',
+                COUNTRY_OPTIONS.length,
+                <div className="space-y-3">
+                  {COUNTRY_OPTIONS.map(country => (
+                    <label key={country} className="flex items-center gap-3 group cursor-pointer" onClick={() => toggleCountry(country)}>
+                      <input
+                        readOnly
+                        className="rounded border-[#c4c5d6] text-[#002691] focus:ring-[#002691] h-5 w-5 cursor-pointer"
+                        type="checkbox"
+                        checked={selectedCountries.includes(country)}
+                      />
+                      <span className={`transition-colors ${selectedCountries.includes(country) ? 'text-[#002691] font-semibold' : 'text-[#444654] group-hover:text-[#002691]'}`}>
+                        {country}
+                      </span>
+                    </label>
+                  ))}
+                </div>,
+              )}
+
+              {renderFilterDropdown(
+                'Gender',
+                'gender',
+                3,
+                <div className="space-y-3">
+                  {['Male', 'Female', 'Others'].map(gen => (
                     <label key={gen} className="flex items-center gap-3 group cursor-pointer" onClick={() => toggleGender(gen)}>
                       <input
                         readOnly
@@ -352,33 +500,35 @@ export default function Scholarships() {
                       </span>
                     </label>
                   ))}
-                </div>
-              </section>
+                </div>,
+              )}
 
-              {/* Disability Status */}
-              <section>
-                <h3 className="text-sm font-black uppercase tracking-widest text-[#002691] mb-4">Disability Status</h3>
-                <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
-                  {['Yes', 'No'].map(dis => (
-                    <label key={dis} className="flex items-center gap-3 group cursor-pointer" onClick={() => toggleDisability(dis)}>
+              {renderFilterDropdown(
+                'Courses',
+                'courses',
+                COURSE_FILTER_OPTIONS.length,
+                <div className="space-y-3">
+                  {COURSE_FILTER_OPTIONS.map(course => (
+                    <label key={course} className="flex items-center gap-3 group cursor-pointer" onClick={() => toggleCourse(course)}>
                       <input
                         readOnly
                         className="rounded border-[#c4c5d6] text-[#002691] focus:ring-[#002691] h-5 w-5 cursor-pointer"
                         type="checkbox"
-                        checked={selectedDisability.includes(dis)}
+                        checked={selectedCourses.includes(course)}
                       />
-                      <span className={`transition-colors ${selectedDisability.includes(dis) ? 'text-[#002691] font-semibold' : 'text-[#444654] group-hover:text-[#002691]'}`}>
-                        {dis}
+                      <span className={`transition-colors ${selectedCourses.includes(course) ? 'text-[#002691] font-semibold' : 'text-[#444654] group-hover:text-[#002691]'}`}>
+                        {course}
                       </span>
                     </label>
                   ))}
-                </div>
-              </section>
+                </div>,
+              )}
 
-              {/* Minority Status */}
-              <section>
-                <h3 className="text-sm font-black uppercase tracking-widest text-[#002691] mb-4">Minority Status</h3>
-                <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
+              {renderFilterDropdown(
+                'Religion',
+                'minority',
+                6,
+                <div className="space-y-3">
                   {['Muslim', 'Christian', 'Sikh', 'Buddhist', 'Jain', 'Parsi (Zoroastrian)'].map(min => (
                     <label key={min} className="flex items-center gap-3 group cursor-pointer" onClick={() => toggleMinority(min)}>
                       <input
@@ -392,14 +542,15 @@ export default function Scholarships() {
                       </span>
                     </label>
                   ))}
-                </div>
-              </section>
+                </div>,
+              )}
 
-              {/* Select Class */}
-              <section>
-                <h3 className="text-sm font-black uppercase tracking-widest text-[#002691] mb-4">Select Class</h3>
-                <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
-                  {ALL_FILTER_CLASSES.map(cls => (
+              {renderFilterDropdown(
+                'Select Class',
+                'class',
+                CLASS_FILTER_OPTIONS.length,
+                <div className="space-y-3">
+                  {CLASS_FILTER_OPTIONS.map(cls => (
                     <label key={cls} className="flex items-center gap-3 group cursor-pointer" onClick={() => toggleClass(cls)}>
                       <input
                         readOnly
@@ -412,8 +563,8 @@ export default function Scholarships() {
                       </span>
                     </label>
                   ))}
-                </div>
-              </section>
+                </div>,
+              )}
 
 
 
@@ -438,10 +589,9 @@ export default function Scholarships() {
                     backgroundSize: ".65rem auto",
                   }}
                 >
-                  <option value="newest">New to Old</option>
-                  <option value="oldest">Old to New</option>
-                  <option value="amount_high_low">Amount: High to Low</option>
-                  <option value="amount_low_high">Amount: Low to High</option>
+                  <option value="latest">Latest</option>
+                  <option value="deadline">Deadline</option>
+                  <option value="highest_amount">Highest Amount</option>
                 </select>
               </div>
             </div>
@@ -453,7 +603,7 @@ export default function Scholarships() {
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`pb-2 font-bold transition-all capitalize ${activeTab === tab ? 'text-[#002691] border-b-2 border-[#002691]' : 'text-[#757685] hover:text-[#002691]'}`}
+                    className={`pb-2 font-bold transition-all capitalize border-0 bg-transparent appearance-none outline-none ring-0 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 ${activeTab === tab ? 'text-[#002691] border-b-2 border-[#002691]' : 'text-[#757685] hover:text-[#002691]'}`}
                   >
                     {tab === 'live' ? `Live Scholarship (${tabCounts.live})` : tab === 'upcoming' ? `Upcoming Scholarship (${tabCounts.upcoming})` : `Always Open (${tabCounts.open})`}
                   </button>
@@ -471,7 +621,11 @@ export default function Scholarships() {
                 const tagColor = TAG_COLORS[s.primaryTag] || TAG_COLORS['General'];
                 const isClosedOrExpired = s.deadline.toLowerCase() === 'closed';
                 return (
-                  <Link to={`/scholarship/${s.id}`} key={s.id} className="bg-white p-6 rounded-xl hover:shadow-lg transition-all duration-300 flex flex-col h-full group border border-[#e5e9e7] relative cursor-pointer pt-8">
+                  <article
+                    key={s.id}
+                    className="bg-white p-6 rounded-xl hover:shadow-lg transition-all duration-300 flex flex-col h-full group border border-[#e5e9e7] relative cursor-pointer pt-8"
+                    onClick={() => navigate(`/scholarship/${s.id}`)}
+                  >
                     {/* Tag Badge */}
                     <span className={`absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-bold ${tagColor}`}>
                       {s.primaryTag}
@@ -494,8 +648,8 @@ export default function Scholarships() {
                     {/* Title */}
                     <h2 className="text-lg font-black uppercase text-[#181d1c] mb-6 leading-snug tracking-tight line-clamp-2">{s.name}</h2>
 
-                    {/* Award & Eligibility */}
-                    <div className="space-y-4 mb-8">
+                    {/* Award */}
+                    <div className="mb-6">
                       <div className="flex items-start gap-4">
                         <span className="text-2xl leading-none drop-shadow-sm">🏆</span>
                         <div>
@@ -503,42 +657,48 @@ export default function Scholarships() {
                           <p className="text-sm font-medium text-[#444654] leading-relaxed line-clamp-1">{s.award}</p>
                         </div>
                       </div>
-                      <div className="flex items-start gap-4">
-                        <span className="text-2xl leading-none drop-shadow-sm opacity-90">🎯</span>
-                        <div>
-                          <p className="font-bold text-sm text-[#181d1c] mb-0.5">Eligibility</p>
-                          <p className="text-sm font-medium text-[#444654] leading-relaxed line-clamp-1">{s.eligibility}</p>
-                        </div>
-                      </div>
                     </div>
 
-                    {/* State & Class chips */}
-                    {(s.states.length > 0 || s.classes.length > 0) && (
-                      <div className="flex flex-wrap gap-1.5 mb-4">
-                        {s.states.slice(0, 2).map(st => (
-                          <span key={st} className="text-[10px] font-bold bg-[#e5e9e7] text-[#444654] px-2 py-0.5 rounded-full">{st}</span>
-                        ))}
-                        {s.states.length > 2 && (
-                          <span className="text-[10px] font-bold bg-[#e5e9e7] text-[#444654] px-2 py-0.5 rounded-full">+{s.states.length - 2} more</span>
-                        )}
-                        {s.classes.slice(0, 1).map(cl => (
-                          <span key={cl} className="text-[10px] font-bold bg-[#dde1ff] text-[#001356] px-2 py-0.5 rounded-full">{cl}</span>
-                        ))}
-                        {s.classes.length > 1 && (
-                          <span className="text-[10px] font-bold bg-[#dde1ff] text-[#001356] px-2 py-0.5 rounded-full">+{s.classes.length - 1}</span>
-                        )}
-                      </div>
-                    )}
+                    {/* Section links */}
+                    <div className="grid grid-cols-2 gap-2 mb-4">
+                      {[
+                        { label: 'About Scholarship', hash: '#about-scholarship' },
+                        { label: 'Scholarship Eligibility', hash: '#scholarship-eligibility' },
+                        { label: 'Benefits & Documents', hash: '#benefits-documents' },
+                        { label: 'How to Apply', hash: '#how-to-apply' },
+                      ].map((item) => (
+                        <button
+                          key={item.hash}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            navigate(`/scholarship/${s.id}${item.hash}`);
+                          }}
+                          className="text-xs text-left text-[#4c5585] hover:text-[#002691] transition-colors border border-[#d9deec] rounded-md px-2 py-1.5 bg-[#f8f9fc]"
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
 
                     {/* Bottom line */}
-                    <div className="text-right text-xs text-[#757685] font-medium mt-auto border-t border-[#e5e9e7] pt-4">
-                      {s.link ? (
-                        <span className="text-[#002691] font-bold group-hover:underline">View Details →</span>
-                      ) : (
-                        'Last Updated On 27-11-2025'
-                      )}
+                    <div className="flex gap-3 mt-auto pt-4 border-t border-[#e5e9e7]">
+                      <button 
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                        className="flex-1 flex items-center justify-center gap-2 bg-[#002691] text-white font-bold py-2.5 rounded-lg hover:bg-[#001556] transition-colors duration-200"
+                      >
+                        <span className="material-symbols-outlined text-base">send</span>
+                        Apply Now
+                      </button>
+                      <button 
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                        className="flex-1 flex items-center justify-center gap-2 bg-white text-[#002691] font-bold py-2.5 rounded-lg border border-[#002691]/30 hover:bg-[#f6faf8] transition-colors duration-200"
+                      >
+                        <span className="material-symbols-outlined text-base">psychology</span>
+                        Mentor
+                      </button>
                     </div>
-                  </Link>
+                  </article>
                 );
               })}
 
