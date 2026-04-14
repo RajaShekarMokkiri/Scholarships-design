@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, type ReactNode } from 'react'
 import { useSearchParams, Link, useNavigate } from 'react-router-dom'
 import { SCHOLARSHIP_DATA, ALL_TAGS, ALL_FILTER_STATES } from '../data/scholarshipData'
 
@@ -250,7 +250,7 @@ export default function Scholarships() {
     title: string,
     section: keyof typeof openFilters,
     count: number,
-    content: JSX.Element,
+    content: ReactNode,
   ) => (
     <section className="rounded-2xl border border-[#e5e9e7] bg-white shadow-sm overflow-hidden">
       <button
